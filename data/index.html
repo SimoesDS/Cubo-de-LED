@@ -1,22 +1,23 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> 
+    <link href="style.css" rel="stylesheet">
   </head>
   <body>
-    <form  id="formNetwork">                    
-            <div class="form-group">
-                <label for="inputNameNetwork">Network name</label>
-                <input type="text" class="form-control" id="inputNameNetwork" placeholder="My_Network" required>
+    <form  id="formNetwork">   
+        <div class="grid">
+            <div class="itens">
+                <label for="inputNameNetwork">Network name:</label>
+                <input type="text" id="inputNameNetwork" placeholder="My_Network" required>    
             </div>
-
-            <div class="form-group">
-                <label for="inputPassword">Password</label>
-                <input type="password" class="form-control" id="inputPassNetwork" placeholder="Password" required>
-            </div>                    
-            <button type="submit" class="btn btn-primary">Connect</button>
+            <div class="itens">
+                <label for="inputPassword">Password:</label>
+                <input type="password" id="inputPassNetwork" placeholder="Password" required>
+            </div>
+            <button type="submit">Connect</button>
+        </div>                             
     </form>
     <script src="app.js"></script>
 </body>

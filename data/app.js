@@ -1,12 +1,19 @@
+var connection = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
 var formNetwork = document.getElementById('formNetwork');
 
 formNetwork.addEventListener('submit', function(e){
     e.preventDefault(); // impede o envio do form
+
     let inputNameNetwork = document.getElementById('inputNameNetwork');
     let inputPassNetwork = document.getElementById('inputPassNetwork');
 
-    console.log(inputNameNetwork.value, inputPassNetwork.value);
+    sendNameNetwork(inputNameNetwork.value);
+    sendPassNetwork(inputPassNetwork.value);
 })
+
+function sendNameNetwork(msg) { connection.send('NNW:' + msg) }
+
+function sendPassNetwork(msg) { connection.send('PNW:' + msg) }
 
 
 /*

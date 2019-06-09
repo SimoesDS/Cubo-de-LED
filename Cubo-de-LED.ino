@@ -97,7 +97,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
   // num: numero do cliente
   // WStype_t: tipo de conexão, pode ser de texto, binaria, messagem de desconectado
   // payload: dados que estão recebendo
-  // length é o tamanho da pagina
+  // length é o tamanho do payload
   switch(type){
     case WStype_CONNECTED:
     {
@@ -120,6 +120,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       uint8_t *strPassNetwork;
       strPassNetwork = getPassNetwork(strPassNetwork, payload);
       Serial.printf("Pass: %s\n", strPassNetwork);
+      Serial.printf("Tamanho: %i\n", length);
     }
   }
 }

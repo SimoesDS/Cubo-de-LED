@@ -7,14 +7,8 @@ formNetwork.addEventListener('submit', function(e){
     let inputNameNetwork = document.getElementById('inputNameNetwork');
     let inputPassNetwork = document.getElementById('inputPassNetwork');
 
-    sendNameNetwork(inputNameNetwork.value);
-    sendPassNetwork(inputPassNetwork.value);
+    connection.send(`NN:${inputNameNetwork.value},PN:${inputPassNetwork.value}`);
 })
-
-function sendNameNetwork(msg) { connection.send('NNW:' + msg) }
-
-function sendPassNetwork(msg) { connection.send('PNW:' + msg) }
-
 
 /*
 var connection = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);

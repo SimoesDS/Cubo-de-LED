@@ -7,5 +7,5 @@ formNetwork.addEventListener('submit', function(e){
     let inputNameNetwork = document.getElementById('inputNameNetwork');
     let inputPassNetwork = document.getElementById('inputPassNetwork');
 
-    connection.send(`NN:${inputNameNetwork.value},PN:${inputPassNetwork.value}`);
+    connection.send(`CN:NN:${inputNameNetwork.value},PN:${inputPassNetwork.value}`);
 })

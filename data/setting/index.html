@@ -8,6 +8,9 @@
   <body>
     <form  id="formNetwork">   
         <div class="grid">
+            <label>Cubo de LED</label>
+            <label>Configuração WiFi</label>
+            <hr>
             <div class="itens">
                 <label for="inputNameNetwork">Network name:</label>
                 <input type="text" id="inputNameNetwork" placeholder="My_Network" required>    
@@ -16,7 +19,9 @@
                 <label for="inputPassword">Password:</label>
                 <input type="password" id="inputPassNetwork" placeholder="Password" required>
             </div>
-            <button type="submit">Connect</button>
+            <div class="btnConnect">
+                <button type="submit">Connect</button>
+            </div>
         </div>                             
     </form>
     <script src="app.js"></script>

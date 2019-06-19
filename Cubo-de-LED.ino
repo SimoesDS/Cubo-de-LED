@@ -18,10 +18,19 @@
 ESP8266WebServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
-static const char* PREFIX_NAMENETWORK = "NN:";
-static const char* PREFIX_PASSNETWORK = "PN:";
+static const char* PREFIX_NAMENETWORK   = "NN:";
+static const char* PREFIX_PASSNETWORK   = "PN:";
 static const char* PREFIX_CONFIGNETWORK = "CN:";
+static const char* PREFIX_CONTROLLED    = "CL:";
+static const char* PREFIX_RED           = "LR:";
+static const char* PREFIX_GREEN         = "LG:";
+static const char* PREFIX_BLUE          = "LB:";
+
 static const char  SUFIX_COMMA = ',';
+
+int isSetting = 0;
+
+void initWebServer();
 
 unsigned int getStrLength(const uint8_t * _data){
   int length = 0;
@@ -44,7 +53,7 @@ unsigned int srcInitPrefix(const uint8_t * _data, const char *prefix, size_t len
   return 0;
 }
 
-void substrData(uint8_t *returnData, const uint8_t *_data, const uint8_t startData, const uint8_t length){
+void substrData(char *returnData, const uint8_t *_data, const uint8_t startData, const uint8_t length){
   for (int i = 0, k = startData; i < length; k++, i++) 
       returnData[i] = _data[k];
   returnData[length] = '\0';
@@ -60,26 +69,30 @@ int getInfData(uint8_t *startData, uint8_t *lengthDataSrc, const uint8_t *dataRe
   return 1;
 }
 
-uint8_t * getDataReceiver(uint8_t *returnData, const uint8_t *data, const size_t lengthData, const char *prefix, const char sufix){
+char * getDataReceiver(char *returnData, const uint8_t *data, const size_t lengthData, const char *prefix, const char sufix){
   uint8_t startData = 0;
   uint8_t lengthDataSrc = 0;
   getInfData(&startData, &lengthDataSrc, data, lengthData, prefix, sufix);
-  returnData = (uint8_t *) malloc(lengthDataSrc + 1 * sizeof(uint8_t));
+  returnData = (char *) malloc(lengthDataSrc + 1 * sizeof(char));
   if(!returnData) printf("Error: Can't allocate memory for name network");
   substrData(returnData, data, startData, lengthDataSrc);
   return returnData;
 }
 
-uint8_t *getNameNetwork(uint8_t *returnData, const uint8_t *data, const size_t lengthData){
+char *getNameNetwork(char *returnData, const uint8_t *data, const size_t lengthData){
   return getDataReceiver(returnData, data, lengthData, PREFIX_NAMENETWORK, SUFIX_COMMA);
 }
 
-uint8_t *getPassNetwork(uint8_t *returnData, const uint8_t *data, const size_t lengthData){
+char *getPassNetwork(char *returnData, const uint8_t *data, const size_t lengthData){
   return getDataReceiver(returnData, data, lengthData, PREFIX_PASSNETWORK, SUFIX_COMMA);
 }
 
 uint8_t isConfigNetwork(uint8_t *data){
   return srcInitPrefix(data, PREFIX_CONFIGNETWORK, strlen(PREFIX_CONFIGNETWORK));
+}
+
+uint8_t isControlLED(uint8_t *data){
+  return srcInitPrefix(data, PREFIX_CONTROLLED, strlen(PREFIX_CONTROLLED));
 }
 
 void listDir(char * path){
@@ -95,8 +108,9 @@ void initSerial() {
   Serial.println("Start...");
 }
 
-void pageRoot() {
-  File fileHootPage = SPIFFS.open("/index.html", "r");
+void getHtml(char *pathPage) {
+  Serial.printf("getHtml %s", pathPage);
+  File fileHootPage = SPIFFS.open(pathPage, "r");
   String webpage = "";
 
   if (!fileHootPage) {
@@ -109,6 +123,94 @@ void pageRoot() {
     webpage += buffer ;
   }
   server.send(200, "text/html", webpage);
+}
+
+void pageSettingWiFi(){
+  getHtml("/setting/index.html");
+}
+
+void pageControlLED(){
+  getHtml("/controlLed/index.html");
+}
+
+void initWSConfigWiFi(){
+  server.close();
+  server.on("/", pageSettingWiFi);
+  server.serveStatic("/app.js", SPIFFS, "/setting/app.js");
+  server.serveStatic("/style.css", SPIFFS, "/setting/style.css");
+}
+
+void initWSCuboLED(){
+  webSocket.close();
+  server.close();
+  server.on("/led", pageControlLED);
+  server.serveStatic("/controlLed/app.js", SPIFFS, "/controlLed/app.js");
+  server.serveStatic("/controlLed/style.css", SPIFFS, "/controlLed/style.css");
+}
+
+void initWiFi(char * ssid, char * password, int mode) {
+  IPAddress myIP;
+  char *strMode;
+
+  switch(mode){
+    case WIFI_AP:{
+      char tempstr[] = "WIFI_AP";
+      strMode = tempstr;
+      break;
+    }
+    case WIFI_STA:{
+      char tempstr[] = "WIFI_STA";
+      strMode = tempstr;
+      break;
+    }
+    case WIFI_AP_STA:{
+      char tempstr[] = "WIFI_AP_STA";
+      strMode = tempstr;
+      break;
+    }
+  }
+
+  Serial.printf("WiFi mode set to %s: %s\n", strMode, WiFi.mode((WiFiMode_t)mode) ? "Success" : "Failed!!");
+  if(mode == WIFI_AP){
+    WiFi.softAP(ssid, password);
+    myIP = WiFi.softAPIP();
+  } else 
+    if( mode == WIFI_STA ){
+      WiFi.begin(ssid, password);
+      while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+      }
+      Serial.println();
+      myIP = WiFi.localIP();
+    } else 
+        Serial.println("WiFi mode not found");
+
+  Serial.print("HotSpt IP: ");
+  Serial.println(myIP);
+}
+
+void changeMode(uint8_t *payload, size_t length){
+  char *strNameNetwork;
+  strNameNetwork = getNameNetwork(strNameNetwork, payload, length);
+  Serial.printf("Name: %s\n", strNameNetwork);
+
+  char *strPassNetwork;
+  strPassNetwork = getPassNetwork(strPassNetwork, payload, length);
+  Serial.printf("Pass: %s\n", strPassNetwork);
+
+  isSetting = 1;
+  initWiFi(strNameNetwork, strPassNetwork, WIFI_STA);
+  isSetting = 0;  
+  initWSCuboLED();
+  initWebServer();
+}
+
+void controlLED(uint8_t * data){
+    char *isRedOn;
+    isRedOn = getDataReceiver(isRedOn, data, 0, PREFIX_RED, '\0');
+    Serial.printf("RED %s:", isRedOn);
+    digitalWrite(LED_RED, (int) isRedOn[0]);
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
@@ -127,42 +229,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     case WStype_DISCONNECTED:
       Serial.printf("[%u] Disconnected!\n", num);
     break;
-    case WStype_TEXT:
-    {
+    case WStype_TEXT: {
       Serial.printf("[%u] get Text: %s\n", num, payload);
       
-      if(isConfigNetwork(payload)){
-        uint8_t *strNameNetwork;
-        strNameNetwork = getNameNetwork(strNameNetwork, payload, length);
-        Serial.printf("Name: %s\n", strNameNetwork);
-
-        uint8_t *strPassNetwork;
-        strPassNetwork = getPassNetwork(strPassNetwork, payload, length);
-        Serial.printf("Pass: %s\n", strPassNetwork);
-      }
+      if(isConfigNetwork(payload))
+        changeMode(payload, length);
+      else if(isControlLED(payload))
+        controlLED(payload);
+      break;
     }
   }
-}
-
-void initWebServer() {
-  server.on("/", pageRoot);
-  server.serveStatic("/app.js", SPIFFS, "/app.js");
-  server.serveStatic("/style.css", SPIFFS, "/style.css");
-
-  server.begin();
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
-
-  Serial.println("HTTP server started");
-}
-
-void initWiFi(char * ssid, char * password) {
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(ssid, password);
-
-  IPAddress myIP = WiFi.softAPIP(); //Get IP address
-  Serial.print("HotSpt IP: ");
-  Serial.println(myIP);
 }
 
 void setup() {
@@ -171,12 +247,23 @@ void setup() {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
-  initWiFi("Controle Cubo de LED", "SimoesDS");
+  initWiFi("Controle Cubo de LED", "SimoesDS", WIFI_AP);
+  initWSConfigWiFi();
   initWebServer();
   //listDir("/");
 }
 
 void loop() {
-  server.handleClient();
-  webSocket.loop();
+  if(!isSetting){
+    server.handleClient();
+    webSocket.loop();
+  }
+}
+
+void initWebServer() {
+  server.begin();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+
+  Serial.println("HTTP server started");
 }

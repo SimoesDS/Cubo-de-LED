@@ -25,20 +25,36 @@ static const char* PREFIX_CONTROLLED    = "CL:";
 static const char* PREFIX_RED           = "LR:";
 static const char* PREFIX_GREEN         = "LG:";
 static const char* PREFIX_BLUE          = "LB:";
-
 static const char  SUFIX_COMMA = ',';
 
 int isSetting = 0;
 
+void initSerial();
+void initWiFi(char * ssid, char * password, int mode);
+void initWSConfigWiFi()
 void initWebServer();
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
+uint8_t isConfigNetwork(uint8_t *data);
+uint8_t isControlLED(uint8_t *data);
+void changeMode(uint8_t *payload, size_t length);
+unsigned int srcInitPrefix(const uint8_t * _data, const char *prefix, size_t lengthData);
+unsigned int getStrLength(const uint8_t * _data);
+char *getNameNetwork(char *returnData, const uint8_t *data, const size_t lengthData);
+char *getDataReceiver(char *returnData, const uint8_t *data, const size_t lengthData, const char *prefix, const char sufix);
+int getInfData(uint8_t *startData, uint8_t *lengthDataSrc, const uint8_t *dataReceiver, const size_t lengthData, const char *prefix, const char sufix);
+void substrData(char *returnData, const uint8_t *_data, const uint8_t startData, const uint8_t length);
+void listDir(char * path);
+void pageSettingWiFi();
+void pageControlLED();
+void getHtml(char *pathPage);
 
-unsigned int getStrLength(const uint8_t * _data){
+unsigned int getStrLength(const uint8_t * _data) {
   int length = 0;
   while(_data[length] != '\0') length++;
   return length;
 }
 
-unsigned int srcInitPrefix(const uint8_t * _data, const char *prefix, size_t lengthData){
+unsigned int srcInitPrefix(const uint8_t * _data, const char *prefix, size_t lengthData) {
   if(!lengthData) lengthData = getStrLength(_data);
   const int lengthPrefix = strlen(prefix);
 
@@ -53,13 +69,13 @@ unsigned int srcInitPrefix(const uint8_t * _data, const char *prefix, size_t len
   return 0;
 }
 
-void substrData(char *returnData, const uint8_t *_data, const uint8_t startData, const uint8_t length){
+void substrData(char *returnData, const uint8_t *_data, const uint8_t startData, const uint8_t length) {
   for (int i = 0, k = startData; i < length; k++, i++) 
       returnData[i] = _data[k];
   returnData[length] = '\0';
 }
 
-int getInfData(uint8_t *startData, uint8_t *lengthDataSrc, const uint8_t *dataReceiver, const size_t lengthData, const char *prefix, const char sufix){
+int getInfData(uint8_t *startData, uint8_t *lengthDataSrc, const uint8_t *dataReceiver, const size_t lengthData, const char *prefix, const char sufix) {
   *startData = srcInitPrefix(dataReceiver, prefix, lengthData);
 
   if( *(dataReceiver + *startData) == '\0') return -1;
@@ -69,7 +85,7 @@ int getInfData(uint8_t *startData, uint8_t *lengthDataSrc, const uint8_t *dataRe
   return 1;
 }
 
-char * getDataReceiver(char *returnData, const uint8_t *data, const size_t lengthData, const char *prefix, const char sufix){
+char * getDataReceiver(char *returnData, const uint8_t *data, const size_t lengthData, const char *prefix, const char sufix) {
   uint8_t startData = 0;
   uint8_t lengthDataSrc = 0;
   getInfData(&startData, &lengthDataSrc, data, lengthData, prefix, sufix);
@@ -79,23 +95,23 @@ char * getDataReceiver(char *returnData, const uint8_t *data, const size_t lengt
   return returnData;
 }
 
-char *getNameNetwork(char *returnData, const uint8_t *data, const size_t lengthData){
+char *getNameNetwork(char *returnData, const uint8_t *data, const size_t lengthData) {
   return getDataReceiver(returnData, data, lengthData, PREFIX_NAMENETWORK, SUFIX_COMMA);
 }
 
-char *getPassNetwork(char *returnData, const uint8_t *data, const size_t lengthData){
+char *getPassNetwork(char *returnData, const uint8_t *data, const size_t lengthData) {
   return getDataReceiver(returnData, data, lengthData, PREFIX_PASSNETWORK, SUFIX_COMMA);
 }
 
-uint8_t isConfigNetwork(uint8_t *data){
+uint8_t isConfigNetwork(uint8_t *data) {
   return srcInitPrefix(data, PREFIX_CONFIGNETWORK, strlen(PREFIX_CONFIGNETWORK));
 }
 
-uint8_t isControlLED(uint8_t *data){
+uint8_t isControlLED(uint8_t *data) {
   return srcInitPrefix(data, PREFIX_CONTROLLED, strlen(PREFIX_CONTROLLED));
 }
 
-void listDir(char * path){
+void listDir(char * path) {
   Dir dir = SPIFFS.openDir(path);
   while (dir.next())
     Serial.println(dir.fileName());
@@ -125,11 +141,11 @@ void getHtml(char *pathPage) {
   server.send(200, "text/html", webpage);
 }
 
-void pageSettingWiFi(){
+void pageSettingWiFi() {
   getHtml("/setting/index.html");
 }
 
-void pageControlLED(){
+void pageControlLED() {
   getHtml("/controlLed/index.html");
 }
 
@@ -190,7 +206,7 @@ void initWiFi(char * ssid, char * password, int mode) {
   Serial.println(myIP);
 }
 
-void changeMode(uint8_t *payload, size_t length){
+void changeMode(uint8_t *payload, size_t length) {
   char *strNameNetwork;
   strNameNetwork = getNameNetwork(strNameNetwork, payload, length);
   Serial.printf("Name: %s\n", strNameNetwork);
@@ -206,11 +222,11 @@ void changeMode(uint8_t *payload, size_t length){
   initWebServer();
 }
 
-void controlLED(uint8_t * data){
+void controlLED(uint8_t * data) {
     char *isRedOn;
     isRedOn = getDataReceiver(isRedOn, data, 0, PREFIX_RED, '\0');
     Serial.printf("RED %s:", isRedOn);
-    digitalWrite(LED_RED, (int) isRedOn[0]);
+    digitalWrite(LED_RED, atoi(isRedOn[0]));
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {

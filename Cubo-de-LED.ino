@@ -25,13 +25,16 @@ static const char* PREFIX_CONTROLLED    = "CL:";
 static const char* PREFIX_RED           = "LR:";
 static const char* PREFIX_GREEN         = "LG:";
 static const char* PREFIX_BLUE          = "LB:";
+static const char* PREFIX_EFFECT        = "LE:";
 static const char  SUFIX_COMMA = ',';
 
 int isSetting = 0;
+int activeEffectLeds = 0;
 
+void initLEDs();
 void initSerial();
 void initWiFi(char * ssid, char * password, int mode);
-void initWSConfigWiFi()
+void initWSConfigWiFi();
 void initWebServer();
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 uint8_t isConfigNetwork(uint8_t *data);
@@ -115,6 +118,17 @@ void listDir(char * path) {
   Dir dir = SPIFFS.openDir(path);
   while (dir.next())
     Serial.println(dir.fileName());
+}
+
+void initLEDs() {
+  pinMode(LED_RED, OUTPUT);
+  digitalWrite(LED_RED, LOW);
+
+  pinMode(LED_GREEN, OUTPUT);
+  digitalWrite(LED_GREEN, LOW);
+
+  pinMode(LED_BLUE, OUTPUT);
+  digitalWrite(LED_BLUE, LOW);
 }
 
 void initSerial() {
@@ -222,11 +236,39 @@ void changeMode(uint8_t *payload, size_t length) {
   initWebServer();
 }
 
+void effectLEDs() {
+  //  int arrConstPinLed[] = {LED_RED, LED_GREEN, LED_BLUE};
+  
+  //  for (int i = 0; i < 3; i++) {
+  //    digitalWrite(arrConstPinLed[i], 1);
+  //    delay(300);
+  //  }
+
+  //  for (int i = 0; i < 3; i++) {
+  //    digitalWrite(arrConstPinLed[i], 0);
+  //    delay(300);
+  //  }    
+}
+
+void onOffLED(uint8_t * data, const char *prefix) {
+  if(srcInitPrefix(data, prefix, 0) > 0){
+    char *isLEDOn = getDataReceiver(isLEDOn, data, 0, prefix, SUFIX_COMMA);
+    Serial.printf("%s %i:\n", prefix, isLEDOn[0] - '0');
+    if(srcInitPrefix(data, PREFIX_RED, 0) > 0)
+      digitalWrite(LED_RED, isLEDOn[0] - '0');
+    else if(srcInitPrefix(data, PREFIX_GREEN, 0) > 0)
+      digitalWrite(LED_GREEN, isLEDOn[0] - '0');
+    else if(srcInitPrefix(data, PREFIX_BLUE, 0) > 0)
+      digitalWrite(LED_BLUE, isLEDOn[0] - '0');
+    else if(srcInitPrefix(data, PREFIX_EFFECT, 0) > 0)
+      activeEffectLeds = isLEDOn[0] - '0';
+  }
+}
+
 void controlLED(uint8_t * data) {
-    char *isRedOn;
-    isRedOn = getDataReceiver(isRedOn, data, 0, PREFIX_RED, '\0');
-    Serial.printf("RED %s:", isRedOn);
-    digitalWrite(LED_RED, atoi(isRedOn[0]));
+    onOffLED(data, PREFIX_RED);
+    onOffLED(data, PREFIX_GREEN);
+    onOffLED(data, PREFIX_BLUE);
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
@@ -258,13 +300,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 }
 
 void setup() {
+  initLEDs();
   initSerial();
   if (!SPIFFS.begin()) {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
   initWiFi("Controle Cubo de LED", "SimoesDS", WIFI_AP);
-  initWSConfigWiFi();
+  //initWiFi("Minha Rede_2.4GHz", "??", WIFI_STA);
+  //initWSConfigWiFi();
+  initWSCuboLED();
   initWebServer();
   //listDir("/");
 }
@@ -273,6 +318,11 @@ void loop() {
   if(!isSetting){
     server.handleClient();
     webSocket.loop();
+
+    if(activeEffectLeds) {
+      effectLEDs();
+      // Serial.printf("Effeito\n");
+    }
   }
 }
 

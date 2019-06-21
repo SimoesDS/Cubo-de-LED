@@ -67,17 +67,16 @@ uint8_t isConfigNetwork(uint8_t *data){
   return srcInitPrefix(data, PREFIX_CONFIGNETWORK, strlen(PREFIX_CONFIGNETWORK));
 }
 
-char payold[] = "CN:NN:Minha Rede,PN:123456789";
-
 int main() {
 //========== LIXO =====================
-    uint8_t * payload = (uint8_t *) malloc(sizeof(payold) - 1 * sizeof(uint8_t));
+    char data[] = "CN:NN:Minha Rede,PN:123456789";
+    uint8_t * payload = (uint8_t *) malloc(sizeof(data) - 1 * sizeof(uint8_t));
     if(payload == NULL)
       printf("Deu muito ruim!!");
     
     int x = 0;
-    for(; payold[x] != '\0'; x++)
-      *(payload + x) = (char) payold[x];
+    for(; data[x] != '\0'; x++)
+      *(payload + x) = (char) data[x];
     *(payload + x) = '\0';
 
     size_t length = getStrLength(payload);

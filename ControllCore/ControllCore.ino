@@ -5,19 +5,23 @@
 #include <ArduinoJson.h>
 #include <string.h>
 
-#define _GPIO1  15
-#define _GPIO2  12
-#define _GPIO3  13
-#define _GPIO4  2
+#define __GPIO0  15
+#define __GPIO1  12
+#define __GPIO2  13
+#define __GPIO3  2
 
 #define LENGTHARRAY(x)  (sizeof(x) / sizeof((x)[0]))
 
-static const int GPIO[] = {_GPIO1, _GPIO2, _GPIO3};
+static const int GPIO[] = {__GPIO0, __GPIO1, __GPIO2};
 
+static const char* PROPERTY_GPIO0   = "GPIO0";
 static const char* PROPERTY_GPIO1   = "GPIO1";
 static const char* PROPERTY_GPIO2   = "GPIO2";
 static const char* PROPERTY_GPIO3   = "GPIO3";
-static const char* PROPERTY_GPIO4   = "GPIO4";
+
+static const char* PROPERTY_SEQLED  = "seqLed";
+
+static const int AMOUNT_LEDS = 125;
 
 ESP8266WebServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -30,7 +34,8 @@ void initWebServer();
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 void pageControllGPIO();
 void getHtml(char *pathPage);
-void process(const uint8_t *payload, size_t length);
+int  processData(const uint8_t *payload, size_t length);
+void sendToOutput(unsigned char num);
 
 void initLEDs() {
   for (int i = 0; i < LENGTHARRAY(GPIO); i++) {
@@ -84,20 +89,55 @@ void initWiFi(char * ssid, char * password, int mode) {
   Serial.println(WiFi.localIP());
 }
 
-void process(const uint8_t *payload, size_t length) {
+void sendToOutput(unsigned char num) {
+  Serial.println(num);
 
-  StaticJsonDocument<1> doc;
-  DeserializationError error = deserializeJson (doc, payload);
-  if(error) {
-    Serial.print("deserializeJson() with code");
-    Serial.println(error.c_str());
+  for (unsigned char aux = 8; aux > 0; aux--) {
+    digitalWrite(GPIO[1], HIGH);
+    delay(20);
+    digitalWrite(GPIO[1], LOW);
+        
+    digitalWrite(GPIO[0], (num % 2 == 0 ? LOW : HIGH));
+    num = num / 2;
+    delay(1000);
   }
 
-  Serial.printf("Se pá foi!!");
+  digitalWrite(GPIO[0], LOW);
+
+  for (unsigned char aux = 0; aux < 2; aux++) {
+    digitalWrite(GPIO[2], HIGH);
+    delay(200);
+    digitalWrite(GPIO[2], LOW);
+    delay(200);
+  }
+}
+
+int processData(const uint8_t *payload, size_t length) {
+  const size_t capacity = JSON_OBJECT_SIZE(1) + 10;
+
+  DynamicJsonDocument doc(capacity);
+
+  DeserializationError error = deserializeJson (doc, payload);
+  if(error) {
+    Serial.print("Deu ruim, provavelmente tu não fez o JSON direito!! \n Erro: ");
+    Serial.println(error.c_str());
+    return 0;
+  }
+
+  if(doc.containsKey(PROPERTY_SEQLED)) {
+    Serial.println("Sending...");
+    sendToOutput(doc[PROPERTY_SEQLED]);
+    Serial.println("Sended!");
+  } else {
+    Serial.println("Key seqLed not found!!");
+    return 0;
+  }
+
+  return 1;
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
-  Serial.println("Passou");
+  
   switch(type){
     case WStype_CONNECTED: {
       IPAddress ip = webSocket.remoteIP(num);
@@ -109,7 +149,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     break;
     case WStype_TEXT: {
       Serial.printf("[%u] get Text: %s\n", num, payload);
-      process(payload, length);
+      processData(payload, length);
       break;
     }
   }

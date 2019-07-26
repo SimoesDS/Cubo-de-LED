@@ -21,8 +21,6 @@ static const char* PROPERTY_GPIO3   = "GPIO3";
 
 static const char* PROPERTY_SEQLED  = "seqLed";
 
-static const int AMOUNT_LEDS = 125;
-
 ESP8266WebServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
@@ -125,7 +123,7 @@ int processData(const uint8_t *payload, size_t length) {
 
   DeserializationError error = deserializeJson (doc, payload);
   if(error) {
-    Serial.print("Deu ruim, provavelmente tu não fez o JSON direito!! \n Erro: ");
+    Serial.print("Eita deu ruim, nego fez merda no JSON, certeza!! \n Erro: ");
     Serial.println(error.c_str());
     return 0;
   }

@@ -36,6 +36,8 @@ void pageControllGPIO();
 void getHtml(char *pathPage);
 int  processData(const uint8_t *payload, size_t length);
 void sendToOutput(unsigned char num);
+void save();
+void commit();
 
 void initLEDs() {
   for (int i = 0; i < LENGTHARRAY(GPIO); i++) {
@@ -93,23 +95,27 @@ void sendToOutput(unsigned char num) {
   Serial.println(num);
 
   for (unsigned char aux = 8; aux > 0; aux--) {
-    digitalWrite(GPIO[1], HIGH);
-    delay(20);
-    digitalWrite(GPIO[1], LOW);
-        
     digitalWrite(GPIO[0], (num % 2 == 0 ? LOW : HIGH));
+    save();
     num = num / 2;
-    delay(1000);
   }
 
   digitalWrite(GPIO[0], LOW);
+  commit();
+}
 
-  for (unsigned char aux = 0; aux < 2; aux++) {
-    digitalWrite(GPIO[2], HIGH);
-    delay(200);
-    digitalWrite(GPIO[2], LOW);
-    delay(200);
-  }
+void save() {
+  digitalWrite(GPIO[1], HIGH);
+  delay(2);
+  digitalWrite(GPIO[1], LOW);
+  delay(2);
+}
+
+void commit() {
+  digitalWrite(GPIO[2], HIGH);
+  delay(2);
+  digitalWrite(GPIO[2], LOW);
+  delay(2);
 }
 
 int processData(const uint8_t *payload, size_t length) {
